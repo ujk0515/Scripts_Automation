@@ -451,6 +451,13 @@ export class GroovyInterpreter {
         case 'toLowerCase': return () => obj.toLowerCase();
         case 'toUpperCase': return () => obj.toUpperCase();
         case 'substring': return (start: number, end?: number) => obj.substring(start, end);
+        case 'matches': return (pattern: string) => new RegExp(pattern).test(obj);
+        case 'indexOf': return (s: string) => obj.indexOf(s);
+        case 'lastIndexOf': return (s: string) => obj.lastIndexOf(s);
+        case 'charAt': return (i: number) => obj.charAt(i);
+        case 'equals': return (s: any) => obj === String(s);
+        case 'equalsIgnoreCase': return (s: string) => obj.toLowerCase() === s.toLowerCase();
+        case 'concat': return (s: string) => obj + s;
       }
     }
 
