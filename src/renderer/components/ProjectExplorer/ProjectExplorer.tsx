@@ -411,13 +411,20 @@ export const ProjectExplorer: React.FC = () => {
   const orderedTestCasesTree = applyOrder(testCasesTree, 'Test Cases');
   const orderedTestSuitesTree = applyOrder(testSuitesTree, 'Test Suites');
 
-  // 리오더 드롭 처리
+  // 리오더 드롭 처리 (같은 폴더: 순서 변경, 다른 폴더: 이동 후 순서 지정)
   const handleReorderDrop = async (targetPath: string, position: 'above' | 'below', dragData: { path: string; name: string; type: string }) => {
     if (!projectPath) return;
-    // 같은 부모 폴더 내에서만 순서 변경
     const dragParent = dragData.path.substring(0, Math.max(dragData.path.lastIndexOf('/'), dragData.path.lastIndexOf('\\')));
     const targetParent = targetPath.substring(0, Math.max(targetPath.lastIndexOf('/'), targetPath.lastIndexOf('\\')));
-    if (dragParent !== targetParent) return; // 다른 폴더면 무시
+
+    // 다른 폴더 → 먼저 파일 이동
+    if (dragParent !== targetParent) {
+      const newPath = `${targetParent}/${dragData.name}`;
+      const result = await api().moveFile({ projectPath, oldPath: dragData.path, newPath });
+      if (!result.success) return;
+      useEditorStore.getState().updateTabPath(dragData.path, newPath);
+      await refreshTree();
+    }
 
     const targetName = targetPath.split(/[\/\\]/).pop()!;
     const dragName = dragData.name;
@@ -541,9 +548,29 @@ export const ProjectExplorer: React.FC = () => {
           {config && (
             <div
               onClick={() => setSelectedFolder('Test Cases')}
+              onDragOver={(e) => {
+                if (!e.dataTransfer.types.includes('application/json')) return;
+                e.preventDefault();
+                e.dataTransfer.dropEffect = 'move';
+                setDragOverPath('Test Cases');
+              }}
+              onDragLeave={() => {
+                if (dragOverPath === 'Test Cases') setDragOverPath(null);
+              }}
+              onDrop={(e) => {
+                e.preventDefault();
+                setDragOverPath(null);
+                try {
+                  const data = JSON.parse(e.dataTransfer.getData('application/json'));
+                  if (!data.path) return;
+                  const parentDir = data.path.substring(0, Math.max(data.path.lastIndexOf('/'), data.path.lastIndexOf('\\')));
+                  if (parentDir === 'Test Cases') return;
+                  handleDropOnFolder('Test Cases', data);
+                } catch {}
+              }}
               className={`px-2 py-1 text-sm font-medium text-white cursor-pointer hover:bg-km-border/50 ${
                 selectedFolder === 'Test Cases' ? 'bg-km-accent/20' : ''
-              }`}
+              } ${dragOverPath === 'Test Cases' ? 'bg-km-accent/30 outline outline-1 outline-km-accent' : ''}`}
             >
               {config.name}
               <span className="ml-2 text-xs text-km-text-dim">({config.type})</span>
