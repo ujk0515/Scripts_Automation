@@ -303,7 +303,19 @@ export class AppiumExecutor {
     await this.autoSwitchContextIfNeeded(cmd.selector!);
     const { strategy, value } = this.resolveTestObject(cmd.selector!);
     const elementId = await this.appiumService.findElement(strategy, value, cmd.timeout);
-    await this.appiumService.clickElement(elementId);
+    try {
+      await this.appiumService.clickElement(elementId);
+    } catch (err: any) {
+      // ELEMENT_NOT_INTERACTABLE → 좌표 기반 탭으로 fallback
+      if (err?.message?.includes('ELEMENT_NOT_INTERACTABLE') || err?.code === 'ELEMENT_NOT_INTERACTABLE') {
+        const rect = await this.appiumService.getElementRect(elementId);
+        const cx = Math.round(rect.x + rect.width / 2);
+        const cy = Math.round(rect.y + rect.height / 2);
+        await this.appiumService.tap(cx, cy);
+      } else {
+        throw err;
+      }
+    }
   }
 
   private async handleSetText(cmd: AppiumCommand): Promise<void> {

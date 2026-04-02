@@ -446,6 +446,10 @@ export class AppiumService {
     await this.request('POST', `/session/${this.sessionId}/element/${elementId}/click`);
   }
 
+  async getElementRect(elementId: string): Promise<{ x: number; y: number; width: number; height: number }> {
+    return this.request('GET', `/session/${this.sessionId}/element/${elementId}/rect`);
+  }
+
   async setElementValue(elementId: string, text: string): Promise<void> {
     await this.request('POST', `/session/${this.sessionId}/element/${elementId}/value`, {
       text,
